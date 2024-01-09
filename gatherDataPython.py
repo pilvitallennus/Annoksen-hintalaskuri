@@ -34,8 +34,9 @@ def main(searchFor):
     time.sleep(2)
 
 
-    # Avaa tiedosto kirjoittamista varten
-    with open('C:/Users/ilari/Desktop/Projektit/ruokaHinta/searchResults.csv', 'w', newline='', encoding='utf-8') as csvfile:
+    # Avaa tiedosto kirjoittamista varten, poistettu julkista repoa varten, joten
+    # polku joten ei välttämättä toimi, korjataan kun on sen aika
+    with open('searchResults.csv', 'w', newline='', encoding='utf-8') as csvfile:
         # Luo CSV-tiedoston kirjoittaja
         writer = csv.writer(csvfile, delimiter=';')
 
