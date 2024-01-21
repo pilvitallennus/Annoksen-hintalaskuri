@@ -3,6 +3,13 @@
 #include <string>
 #include <iostream>
 
+/**
+ * Tuotetta kuvaava luokka johon tallennetaan:
+ *      -tuotteen nimi
+ *      -tuotteelle itseannettu, kuvaava nimi
+ *      -hinta
+ *      -kilohinta
+ */
 class Product
 {
 public:
@@ -23,13 +30,10 @@ public:
 
 
 
-    // Return funktiot
+    // Getter funktiot
     std::string getProductName() const;
-
     std::string getDescName() const;
-
     double getProductPrice() const;
-
     double getProductPricePerKg() const;
 
 

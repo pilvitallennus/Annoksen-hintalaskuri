@@ -13,64 +13,180 @@
 
 using allProducts = std::map<std::string, std::shared_ptr<Product>>;
 using foundProducts = std::map<std::string, std::shared_ptr<Product>>;
-using allRecipes = std::map<std::string, std::vector<std::pair<std::string, int>>>;
-
+using allRecipes = std::map<std::string, std::vector<std::pair<std::string, double>>>;
 
 
 
 class FoodFunctionality
 {
-
 public:
     FoodFunctionality();
 
 
-    // tietojenkäsittely
-    void gatherFromWeb(const std::string& searchFor);
-    std::vector<std::string> getAllProducts();
-    std::vector<std::pair<std::string, int>> getRecipeProducts(const std::string& recipeName);
+    // Tietojenkäsittely
 
+    /**
+     * Hakee tuotteita python-skriptin avulla verkkosivustolta
+     * @param searchFor - Hakusana joka välitetään verkkosivulle
+     * @return 'true', jos haku onnistui, muuten 'false'
+     */
+    bool gatherFromWeb(const std::string& searchFor);
+
+    /**
+     * Hakee tuotteelle hinnan ja palauttaa sen
+     * @param productName - Haettavan tuotteen nimi
+     * @return tuotteen hinta haettuna tuoteoliosta
+     */
+    double getProductPrice(const std::string& productName) const;
+
+    /**
+     * Hakee tuoteen kuvaavan nimen ja palauttaa sen
+     * @param productName - Haettavan tuotteen nimi
+     * @return tuotteen kuvaava nimi haettuna tuoteoliosta
+     */
+    std::string getProductDescName(const std::string& productName) const;
+    /**
+     * Hakee kaikki tallennetut tuotteet allProducts_ map:ista ja palauttaa
+     * niiden nimet vektorina
+     * @return Kaikkien tallennettujen tuotteiden nimet vektorina
+     */
+    std::vector<std::string> getAllProducts() const;
+
+    /**
+     * Hakee kaikki tallennetut reseptit allRecipes_ map:ista ja palauttaa
+     * niiden nimet vektorina
+     * @return Kaikkien tallennettujen reseptejen nimet vektorina
+     */
+    std::vector<std::string> getAllRecipes() const;
+
+    /**
+     * Etsii reseptin tuotteet allRecipes_ map:ista ja palauttaa tuotteen vektorina
+     * @param recipeName - Etsittävän reseptin nimi
+     * @return Vektori joka sisältää etsittävän reseptin tuotteet ja määrät
+     */
+    std::vector<std::pair<std::string, double>> getRecipeProducts(
+                                                    const std::string& recipeName) const;
+
+
+    /**
+     * Lisää tallennetun tuotteen tietokantaan, eli productDataBase.csv -tiedostoon
+     * @param product - Osoitin lisättävän tuotteen tuoteolioon
+     * @return 'true', jos lisäys onnistui, muuten 'false'
+     */
     bool addProductToDatabase(const std::shared_ptr<Product>& product);
+
+
+    /**
+     * Hakee productDataBase.csv tiedostosta kaikki tallennetut tuotteet ja lisää ne
+     * allProducts_ map:iin
+     */
     void pullProductsFromDatabase();
 
-    bool addRecipeToDatabase(const std::string& recipeName, const std::vector<std::pair<std::string, int>>& recipeProducts);
+
+    /**
+     * Lisää tallennetun reseptin tietokantaan, eli recipeDataBase.csv -tiedostoon
+     * @param recipeName - Lisättävän reseptin nimi
+     * @param recipeProducts - Vektori jossa on reseptin tuotteiden nimet ja määrät
+     * @return 'true', jos lisäys onnistui, muuten 'false'
+     */
+    bool addRecipeToDatabase(const std::string& recipeName,
+                             const std::vector<std::pair<std::string,
+                             double>>& recipeProducts);
+
+
+    /**
+     * Hakee recipeDataBase.csv tiedostosta kaikki tallennetut reseptit ja lisää ne
+     * allRecipes_ map:iin
+     */
     void pullRecipesFromDatabase();
 
 
 
+    // Tuotteiden käsittely
 
-    // tuotteiden käsittely
+
+    /**
+     * Luo hakutuloksena löytyneelle tuotteelle tuoteolion ja lisää sen foundProducts_
+     * map:iin
+     * @param name - Löydetyn tuotteen nimi
+     * @param price - Löydetyn tuotteen hinta
+     * @param pricePerKg - Löydetyn tuotteen kilohinta
+     */
     void addFoundProduct(const std::string& name, double& price, double& pricePerKg);
+
+
+    /**
+     * Tallentaa löydetyn tuotteen tallennetuksi tuotteeksi, eli siirtää tuotteen
+     * foundProducts_ -> allProducts_
+     * @param name - Lisättävän tuotteen nimi
+     * @param descName - Lisättävän tuotteen kuvaava nimi
+     * @return 'true', jos tuotteen lisääminen onnistuu, muuten 'false'
+     */
     bool addProduct(const std::string& name, const std::string& descName);
 
 
-    // reseptien käsittely
-    bool recipeExists(const std::string recipeName);
-    void createRecipe(const std::string recipeName);
-    void addProductToRecipe(const std::string recipeName, std::string productName, int amount);
+
+    // Reseptien käsittely
 
 
+    /**
+     * Tarkistaa onko resepti olemassa, eli onko reseptiä allRecipes_ map:issa
+     * @param recipeName - Tarkistettavan reseptin nimi
+     * @return 'true', jos resepti on olemassa, muuten 'false'
+     */
+    bool recipeExists(const std::string& recipeName) const;
 
-    // muut funktiot
+    /**
+     * Luo reseptin, jos sellaista ei vielä ole olemassa. Resepti luodaan
+     * lisäämällä reseptin nimellä avain ja sille tyhjä vektori arvopariksi.
+     * @param recipeName - Reseptin nimi
+     */
+    void createRecipe(const std::string& recipeName);
+
+    /**
+     * Lisää olemassaolevaan reseptiin tuotteen.
+     * @param recipeName - Resepti, johon tuote lisätään
+     * @param productName - Lisättävän tuotteen nimi
+     * @param amount - Lisättävän tuotteen määrä
+     *                  1 = koko tuote
+     *                  0,5 = puolikas tuote jne...
+     */
+    void addProductToRecipe(const std::string& recipeName, const std::string& productName, const double& amount);
+
+    /**
+     * Laskee reseptin annoshinnan, eli aineet/kertoja syöty
+     * @param recipeName - Resepti, jonka hintaa lasketaan
+     * @param servings  - Syöntikertojen määrä
+     * @return palauttaa annoshinnan
+     */
+    double calculatePricePerServing(const std::string& recipeName, const double& servings) const;
+    // Muut funkiot
+
+    /**
+     * Jakaa merkkijonon osiin ja palauttaa sen vektorina.
+     * @param str - Jaettava merkkijono
+     * @param delim - Erotin jonka mukaan jaetaan
+     * @return vektori jossa on alkiona eroteltu jaettava merkkijono
+     */
     std::vector<std::string> split(const std::string& str, char delim = ';');
 
 
-    //testifunktiot
+    //Testifunktioita
     void printAllProducts() const;
     void tulostaFoundProductsKoko();
     void tulostaRecipes();
+    void tulostaRecipesJaHinnat();
 
 private:
 
-    // pitää  kirjaa tallennetuista tuotteista
-    allProducts allProducts_;       // map<string, osoitin tuoteolioon>
+    // Pitää  kirjaa tallennetuista tuotteista
+    allProducts allProducts_;       // map<tuotteen nimi, osoitin tuoteolioon>
 
-    // pitää kirjaa haetuista (ja löydetyistä tuotteesta)
-    // tyhjennetään, kun yksi haetuista tuotteista lisätään allProducts rakenteeseen
-    foundProducts foundProducts_;   // map<strig, osoitin tuoteolioon>,
+    // Pitää kirjaa hakutuloksista, tyhjennetään lisättäessä tuote
+    foundProducts foundProducts_;   // map<tuotteen nimi, osoitin tuoteolioon>,
 
-    // pitää kirjaa kaikista luoduista resepteistä
-    allRecipes allRecipes_;    // map<string, vector<pair<tuote-olio, määrä>>
+    // Pitää kirjaa kaikista luoduista resepteistä
+    allRecipes allRecipes_;    // map<reseptin nimi, vector<pair<tuote-olio, määrä>>
 };
 
 

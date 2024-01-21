@@ -5,7 +5,6 @@
 
 
 
-
 Product::Product(const std::string& productName,
                  const std::string& descName,
                  double productPrice,
@@ -22,7 +21,6 @@ Product::~Product()
 {
 
 }
-
 
 
 std::string Product::getProductName() const

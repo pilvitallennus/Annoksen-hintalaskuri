@@ -8,8 +8,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <fstream>
-#include <future> // async
-
+#include <future>
 #include <QDebug>
 #include <QString>
 
@@ -21,55 +20,85 @@ FoodFunctionality::FoodFunctionality()
 
 }
 
-// Käynnistää Python-hakuskriptin komentorivikomennolla
-// Ei välttämättä paras mahdollinen ratkaisu mutta omaan käyttöön
-// kehitetyssä ohjelmassa mielestäni riittävä
-void FoodFunctionality::gatherFromWeb(const std::string& searchFor)
+bool FoodFunctionality::gatherFromWeb(const std::string& searchFor)
 {
-    // Luo komennon, -u unbuffered - toimii älä muuta
-    // Julkisesta reposta poistettu gatherDataPython.py tarkka polku tietokoneella, ei välttämättä toimi
-    // Kehitysvaiheessa tiedosto sijaitsi other files kansiossa, jotta sen muokkaaminen oli helppoa
-    // Lopulliseen versioon tulee varmaan build-kansioon?
+    // Luo komennon, -u unbuffered - kehitysvaiheessa tässä on absoluuttinen polku
     std::string command = "python -u gatherDataPython.py";
 
     // Käynnistää Python-skriptin komentoriviparametrilla
-    command += " \"" + searchFor + "\"";  // Lisätään hakusana komennon perään lainausmerkeissä
+    command += " \"" + searchFor + "\"";
 
     FILE* pipe = _popen(command.c_str(), "r");
 
     if (!pipe)
     {
-        return;
+        qDebug() << "gatherFromWeb virhe";
+        return false;
     }
 
-    // Lähettää tiedot Python-skriptille
-    std::string input_data = "";
-    fprintf(pipe, "%s", input_data.c_str());
-    fflush(pipe);
-
-
     _pclose(pipe);
-    qDebug() << "Python script executed.";
+    return true;
+}
+
+double FoodFunctionality::getProductPrice(const std::string &productName) const
+{
+    auto productIter = allProducts_.find(productName);
+    if (productIter != allProducts_.end() )
+    {
+        double productPrice =  productIter->second->getProductPrice();
+        return productPrice;
+    }
+    else
+    {
+        return 0.0;
+    }
 }
 
 
-// Hakee kaikki tallennetut tuotteet allProducts_ rakenteesta ja palauttaa niiden nimet vektorina
-std::vector<std::string> FoodFunctionality::getAllProducts()
+std::string FoodFunctionality::getProductDescName(const std::string &productName) const
+{
+    auto productIter = allProducts_.find(productName);
+    if (productIter != allProducts_.end() )
+    {
+        std::string descName = productIter->second->getDescName();
+        return descName;
+    }
+    else
+    {
+        return "";
+    }
+}
+
+
+
+std::vector<std::string> FoodFunctionality::getAllProducts() const
 {
     std::vector<std::string> allProductNames;
 
     for (const auto& product : allProducts_)
     {
         std::string productName = product.first;
-
         allProductNames.push_back(productName);
     }
-
     return allProductNames;
 }
 
-// Hakee kaikki reseptin tuotteet ja palauttaa ne vektorina
-std::vector<std::pair<std::string, int> > FoodFunctionality::getRecipeProducts(const std::string &recipeName)
+
+std::vector<std::string> FoodFunctionality::getAllRecipes() const
+{
+    std::vector<std::string> allRecipeNames;
+    for (const auto& recipe : allRecipes_)
+    {
+        std::string recipeName = recipe.first;
+        allRecipeNames.push_back(recipeName);
+    }
+    return allRecipeNames;
+}
+
+
+
+std::vector<std::pair<std::string, double> > FoodFunctionality::getRecipeProducts(
+    const std::string &recipeName) const
 {
     auto recipeIter = allRecipes_.find(recipeName);
 
@@ -78,6 +107,7 @@ std::vector<std::pair<std::string, int> > FoodFunctionality::getRecipeProducts(c
         // Palautetaan reseptin tuotteet ja määrät
         return recipeIter->second;
     }
+
     else
     {
         // Tyhjä vektori, jos reseptiä ei löydy
@@ -86,105 +116,93 @@ std::vector<std::pair<std::string, int> > FoodFunctionality::getRecipeProducts(c
 }
 
 
-// Tallentaa tuotteen productDataBase.csv tiedostoon
 bool FoodFunctionality::addProductToDatabase(const std::shared_ptr<Product>& product)
 {
-    // Avaa "tiedosto-tietokannan" lisäystilassa
-    // Poistettu .csv polku
+    // Avaa "tiedosto-tietokannan" lisäystilassa, vaihda lopussa build kansioon kirjoitettavaksi eli poista polku
+	// Poistettu absoluuttinen polku
     std::ofstream databaseFile("productDataBase.csv", std::ios::app);
 
     if (!databaseFile.is_open())
     {
-        qDebug() << "Error opening databaseFile addProductToDatabase() -funktiossa";
+        qDebug() << "Error addProductToDatabase() -funktiossa";
         return false;
     }
 
-    // riville kirjoitus
     databaseFile << product->getProductName() << ";"
                << product->getDescName() << ";"
                << product->getProductPrice() << ";"
                << product->getProductPricePerKg() << "\n";
 
-
     databaseFile.close();
-
-    qDebug() << QString::fromStdString(product->getProductName()) << " lisätty tietokantaan";
     return true;
 }
 
 
-// Ohjelman käynnistyessä hakee productDataBase.csv tiedoston tuotteet ja tallentaa ne
-// map rakenteeseen allProducts_
 void FoodFunctionality::pullProductsFromDatabase()
 {
-    // Poistettu .csv polku
     std::ifstream databaseFile("productDataBase.csv");
 
     if (!databaseFile.is_open())
     {
-        qDebug() << "Error opening databaseFile pullProductsFromDatabase() -funktiossa";
+        qDebug() << "Error pullProductsFromDatabase() -funktiossa";
         return;
     }
 
     std::string line;
 
-
     while (std::getline(databaseFile, line))
     {
         std::vector<std::string> params = split(line, ';');
 
-
         if (params.size() == 4)
         {
-
             std::string name = params[0];
             std::string descName = params[1];
             double price = std::stod(params[2]);
             double pricePerKg = std::stod(params[3]);
 
-            std::shared_ptr<Product> newProduct = std::make_shared<Product>(name, descName, price, pricePerKg);
-
+            std::shared_ptr<Product> newProduct = std::make_shared<Product>(name,
+                                                                            descName,
+                                                                            price,
+                                                                            pricePerKg);
             allProducts_.insert({name, newProduct});
         }
+
         else
         {
             qDebug() << "Virheellinen rivi tiedostossa: " << QString::fromStdString(line);
         }
     }
 
-    // Sulje tiedosto
     databaseFile.close();
-    // printAllProducts();
 }
 
 
-
-
-bool FoodFunctionality::addRecipeToDatabase(const std::string& recipeName, const std::vector<std::pair<std::string, int>>& recipeProducts)
+bool FoodFunctionality::addRecipeToDatabase(const std::string& recipeName,
+                                            const std::vector<std::pair<std::string,
+                                            double>>& recipeProducts)
 {
     // Avaa "tiedosto-tietokannan" lisäystilassa, vaihda lopussa build kansioon kirjoitettavaksi eli poista polku
     std::ofstream databaseFile("recipeDataBase.csv", std::ios::app);
 
     if (!databaseFile.is_open())
     {
-        qDebug() << "Error opening databaseFile addRecipeToDatabase() -funktiossa";
+        qDebug() << "Error addRecipeToDatabase() -funktiossa";
         return false;
     }
 
-    // Rivin ensimmäinen reseptin nimi
+    // Ensimmäisenä reseptin nimi
     databaseFile << recipeName << ";";
 
 
-    // Kirjoita jokainen tuote ja sen määrä peräkkäin
+    // Tuote1;Määrä1;Tuote2;Määrä2; jne...
     for (const auto& product : recipeProducts)
     {
         databaseFile << product.first << ";" << product.second << ";";
     }
-    // Rivinvaihto
+
     databaseFile << "\n";
     databaseFile.close();
-
-
     return true;
 }
 
@@ -195,40 +213,34 @@ void FoodFunctionality::pullRecipesFromDatabase()
 
     if (!databaseFile.is_open())
     {
-        qDebug() << "Error opening databaseFile pullRecipesFromDatabase() -funktiossa";
+        qDebug() << "Error pullRecipesFromDatabase() -funktiossa";
         return;
     }
 
     std::string line;
 
-
     while (std::getline(databaseFile, line))
     {
         std::vector<std::string> params = split(line, ';');
-
 
         // Tarkistaa, että rivillä on parillinen määrä tietoja (nimi   +tuote1;määrä1,...... ;tyhjä)
         if (params.size() % 2 == 0)
         {
             std::string recipeName = params[0];
+
+            // Luo reseptin, eli avaimen ja tyhjän vektorin tuotteille
             createRecipe(recipeName);
 
-            // Käsittely tuotenimen ja määräparien osalta
+            // Käsittely tuotenimen ja määrän osalta
             for (size_t i = 1; i < params.size(); i += 2)
             {
                 std::string productName = params[i];
-
-                // Tarkistaa, että määrätieto on olemassa ennen sen käyttämistä
+                // Tarkistaa, että määrätieto on olemassa
                 if (i + 1 < params.size() && !params[i + 1].empty())
                 {
-                    int amount = std::stoi(params[i + 1]);
+                    double amount = std::stod(params[i + 1]);
 
-                    // Lisää tuote reseptiin
                     addProductToRecipe(recipeName, productName, amount);
-                }
-                else
-                {
-                    // ei mitään varmistaa ettei kaadu
                 }
             }
         }
@@ -237,33 +249,35 @@ void FoodFunctionality::pullRecipesFromDatabase()
 }
 
 
-// Käytetään tallentamaan hakutuloksen tuotteet
-void FoodFunctionality::addFoundProduct(const std::string& name, double& price, double& pricePerKg)
+void FoodFunctionality::addFoundProduct(const std::string& name,
+                                        double& price,
+                                        double& pricePerKg)
 {
     if (foundProducts_.find(name) != foundProducts_.end() )
     {
-        qDebug() << "tuote on jo etsityissä tuotteissa";
+        qDebug() << "Tuote on jo etsityissä tuotteissa";
         return;
     }
     else
     {
-        // Luodaan std::shared_ptr<Product> ja lisätään se allProducts_-map:iin
-        std::shared_ptr<Product> newProduct = std::make_shared<Product>(name, "", price, pricePerKg);
+        std::shared_ptr<Product> newProduct = std::make_shared<Product>(name, "",
+                                                                        price,
+                                                                        pricePerKg);
         foundProducts_.insert({name, newProduct});
         return;
     }
 }
 
 
-// Käytetään tallentamaan lisättävä tuote (hakutuloksista)
 bool FoodFunctionality::addProduct(const std::string& name, const std::string& descName)
 {
-    // ei olemassaoleva tuote ja tulee olla löydettyjen tuotteiden mapissa
+    // Tuote on jo tallennettu
     if (allProducts_.find(name) != allProducts_.end())
     {
         qDebug() << "Tuotete on jo tallennetuissa tuotteissa";
         return false;
     }
+    // Tuotetta ei ole haettujen tuotteiden joukossa
     else if (foundProducts_.find(name) == foundProducts_.end())
     {
         qDebug() << "Tuotetta ei ole haetuissa tuotteissa";
@@ -274,18 +288,24 @@ bool FoodFunctionality::addProduct(const std::string& name, const std::string& d
     {
         auto foundProductIter = foundProducts_.find(name);
 
-        // Hae hinta ja kilohinta
+        // Hakee hinnan ja kilohinnan
         double price = foundProductIter->second->getProductPrice();
         double pricePerKg = foundProductIter->second->getProductPricePerKg();
 
-        // Luodaan std::shared_ptr<Product> ja lisätään se allProducts_-map:iin
-        std::shared_ptr<Product> newProduct = std::make_shared<Product>(name, descName, price, pricePerKg);
+        // Luodaan std::shared_ptr<Product> ja lisätään se allProducts_ map:iin
+        std::shared_ptr<Product> newProduct = std::make_shared<Product>(name,
+                                                                        descName,
+                                                                        price,
+                                                                        pricePerKg);
         allProducts_.insert({name, newProduct});
 
         if(addProductToDatabase(newProduct))
         {
-            qDebug() <<"Tuotteen " << QString::fromStdString(name) <<
-                "lisääminen onnistui. Tuotteita tallennettu " << allProducts_.size();
+            qDebug() <<"Tuotteen " <<
+                QString::fromStdString(name) <<
+                "lisääminen onnistui. Tuotteita tallennettu "
+                     << allProducts_.size();
+
             // tyhjennetään väliaikainen löytyneiden tuotteiden map
             foundProducts_.empty();
             return true;
@@ -293,60 +313,98 @@ bool FoodFunctionality::addProduct(const std::string& name, const std::string& d
         else
         {
             // ei pitäisi tapahtua ikinä
-            qDebug() << "HÄLYTYS HÄLYTYS KAMALA ERRORI addProduct() -funktiossa";
+            qDebug() << " addProduct() - error";
             return false;
         }
-
-
-
     }
-
 }
 
 
-// Tarkistaa onko resepti olemassa (allRecipes_ mapissa)
-bool FoodFunctionality::recipeExists(const std::string recipeName)
+bool FoodFunctionality::recipeExists(const std::string& recipeName) const
 {
     if (allRecipes_.find(recipeName) != allRecipes_.end())
     {
         qDebug() << "Resepti " << QString::fromStdString(recipeName) << " löytyy";
         return true;
     }
-    return false;
+    else
+    {
+       return false;
+    }
 }
 
 
-// Luo uuden reseptin allRecipes_ mappiin
-void FoodFunctionality::createRecipe(const std::string recipeName)
+void FoodFunctionality::createRecipe(const std::string& recipeName)
 {
     if(!recipeExists(recipeName))
     {
-        // Luodaan (resepti) -map rakenteeseen uusi avain reseptille ja tyhjä vektori
+        // Luodaan allRecipes_ map:iin uusi avain reseptille ja tyhjä vektori
         allRecipes_[recipeName] = {};
         qDebug() << "Uusi resepti luotu: " << QString::fromStdString(recipeName);
     }
 }
 
 
-// Lisää tuotteen olemassaolevaan reseptiin
-void FoodFunctionality::addProductToRecipe(const std::string recipeName, std::string productName, int amount)
+void FoodFunctionality::addProductToRecipe(const std::string& recipeName,
+                                           const std::string& productName,
+                                           const double& amount)
 {
     auto foundRecipe = allRecipes_.find(recipeName);
 
     if (foundRecipe != allRecipes_.end())
     {
         foundRecipe->second.push_back(std::make_pair(productName, amount));
-        qDebug() << "Lisätty tuote " << QString::fromStdString(productName) << " reseptiin " << QString::fromStdString(recipeName);
-
+        /* TESTI TESTI
+        qDebug() << "Lisätty tuote " <<
+            QString::fromStdString(productName) <<
+            " reseptiin " <<
+            QString::fromStdString(recipeName);
+        */
     }
     else
     {
-        qDebug() << "KAMALA VIRHE addProcutToRecipe() else trigger, ei pitäisi ikinä tapahtua";
+        qDebug() << "addProcutToRecipe() else, ei pitäisi ikinä tapahtua";
     }
 }
 
 
-// Jakaa rivin delim mukaan osiin ja palauttaa vektorina
+double FoodFunctionality::calculatePricePerServing(const std::string &recipeName,
+                                                   const double &servings) const
+{
+    auto foundRecipe = allRecipes_.find(recipeName);
+
+    double pricePerServing = 0.0;
+
+    if (foundRecipe != allRecipes_.end())
+    {
+        // Muuttuja, johon lasketaan kokonaishinta
+        double totalPrice = 0.0;
+
+        // Reseptin tuotteet
+        std::vector<std::pair<std::string, double>> recipeProducts =
+                                            getRecipeProducts(recipeName);
+
+        for (const auto& product : recipeProducts)
+        {
+            // Vektorista tuotteen määtäkerroin
+            double amount = product.second;
+
+            // Etsitään tuoteolio ja sen hinta allProducts map:ista
+            auto recipeProduct = allProducts_.find(product.first);
+            double productPrice =  recipeProduct->second->getProductPrice();
+
+            // Lisätään yhteishintaan tuotteen hinta kertaa määräkerroin
+            totalPrice += productPrice * amount;
+
+        }
+        // Tuotteet käyty käpi, lasketaan annoshinta
+        pricePerServing = totalPrice/servings;
+    }
+    return pricePerServing;
+}
+
+
+
 std::vector<std::string> FoodFunctionality::split(const std::string& str, char delim)
 {
     std::vector<std::string> result = {""};
@@ -371,12 +429,12 @@ std::vector<std::string> FoodFunctionality::split(const std::string& str, char d
 
 
 
-// TESTIFUNKTIOITA
+
+// TESTIFUNKTIOITA joita ei tule lopulliseen versioon
 void FoodFunctionality::tulostaFoundProductsKoko()
 {
     qDebug() << "comboboxin koko tulisi olla: " <<  foundProducts_.size();
 }
-
 
 void FoodFunctionality::tulostaRecipes()
 {
@@ -393,6 +451,31 @@ void FoodFunctionality::tulostaRecipes()
     }
 }
 
+void FoodFunctionality::tulostaRecipesJaHinnat()
+{
+    qDebug();
+    for (const auto& recipe : allRecipes_)
+    {
+        qDebug() << "Resepti: " << QString::fromStdString(recipe.first);
+        qDebug() << "Tuotteet: ";
+        for (const auto& product : recipe.second)
+        {
+            for (const auto& productName : allProducts_)
+            {
+                if (productName.first == product.first)
+                {
+                    double productPrice = productName.second->getProductPrice();
+
+
+
+                    qDebug() << "  - " << QString::fromStdString(product.first) << ": " << QString::number(productPrice);
+                }
+            }
+
+        }
+        qDebug() << "-------------------------";
+    }
+}
 
 void FoodFunctionality::printAllProducts() const
 {

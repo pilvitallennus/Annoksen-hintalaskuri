@@ -10,6 +10,7 @@
 #include <QLabel>
 #include <QTextBrowser>
 #include <QListWidget>
+#include <QTableWidget>
 #include <QComboBox>
 #include <vector>
 
@@ -31,17 +32,20 @@ public:
 
 
 private slots:
+    // Luo käyttöliittymän elementit, jaoteltu toiminnoittain
     void initSearch();
     void initNormal();
     void initRecipe();
 
+    // Muu toiminnallisuus
     void searchForProduct();
     void updateProductComboBox();
     void addChosenProduct();
 
     void addRecipe();
 
-
+    void calculateRecipe();
+    // TESTI
     void onTest2ButtonClicked();
 
 private:
@@ -56,6 +60,7 @@ private:
 
     // Tuotteiden haku ja lisäys
     QLineEdit * searchLineEdit;
+    QLabel * descNameLabel;     // Tekeekö desc nimellä mitään? Arvioi lopussa
     QLineEdit * descNameLineEdit;
     QPushButton * searchButton;
     QPushButton * addButton;
@@ -63,12 +68,16 @@ private:
 
 
     // Reseptit
-    QListWidget * savedProductsListWidget;
+    QTableWidget * savedProductsTableWidget;
     QPushButton * addRecipeButton;
+    QLabel * recipeNameLabel;
     QLineEdit * recipeNameLineEdit;
 
+    QTableWidget * recipeTableWidget;
+    QTextBrowser * recipePriceBrowser;
+    QPushButton * calculateRecipeButton;
 
-    // Muut widgetit
+    // Muut "yleiset" widgetit
     QPushButton * closeButton;
     QTextBrowser * statusBrowser;
 

@@ -1,1 +1,0 @@
-# Annoksen-hintalaskuri
