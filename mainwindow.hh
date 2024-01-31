@@ -12,6 +12,7 @@
 #include <QListWidget>
 #include <QTableWidget>
 #include <QComboBox>
+#include <QCheckBox>
 #include <vector>
 
 
@@ -33,29 +34,40 @@ public:
 
 private slots:
     // Luo käyttöliittymän elementit, jaoteltu toiminnoittain
-    void initSearch();
     void initNormal();
+    void initSearch();
     void initRecipe();
+    void initEdit();
 
-    // Muu toiminnallisuus
+    // Päätoiminnot
     void searchForProduct();
     void updateProductComboBox();
     void addChosenProduct();
 
     void addRecipe();
-
     void calculateRecipe();
-    // TESTI
-    void onTest2ButtonClicked();
+    void deleteRecipe();
+
+    void openRecipeEditTableWidget();
+    void updateRecipe();
+    void addToExistingRecipe();
+
+    void discardRecipeEdit();
+    void lockFunctionalityForDatabaseEdit();
+    void unlockFunctionality();
+
+
+
 
 private:
     Ui::MainWindow *ui;
     FoodFunctionality* func;
 
+    bool isRecipeEditModeEnabled() const;
+    bool isProductAlreadyInrecipeEditTableWidget(const std::string& productName);
+
     // väliaikainen nappi, mahdollistaa testaamisen ilman pitkään kestävää selenium-hakua
     QPushButton * testButton;
-    // Debug-virtaan tulostava testinappi
-    QPushButton * test2Button;
 
 
     // Tuotteiden haku ja lisäys
@@ -77,9 +89,22 @@ private:
     QTextBrowser * recipePriceBrowser;
     QPushButton * calculateRecipeButton;
 
+    // Tietokannan muokkaus
+    QCheckBox * databaseEditCheckBox;
+    QTableWidget * recipeEditTableWidget;
+    QPushButton * deleteRecipePushButton;
+    QPushButton * openRecipeEditPushButton;
+    QPushButton * editRecipePushButton;
+    QPushButton * discardRecipeEditPushButton;
+    QPushButton * addProductToExistingRecipePushButton;
+
     // Muut "yleiset" widgetit
     QPushButton * closeButton;
     QTextBrowser * statusBrowser;
+    QLabel * chackboxInfoLabel;
+
+
+
 
 };
 #endif // MAINWINDOW_HH

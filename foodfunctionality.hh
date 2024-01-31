@@ -23,7 +23,7 @@ public:
     FoodFunctionality();
 
 
-    // Tietojenkäsittely
+    // Tietojenkäsittely - Tiedostojen muokkaus
 
     /**
      * Hakee tuotteita python-skriptin avulla verkkosivustolta
@@ -31,6 +31,51 @@ public:
      * @return 'true', jos haku onnistui, muuten 'false'
      */
     bool gatherFromWeb(const std::string& searchFor);
+
+    /**
+     * Lisää tallennetun tuotteen tietokantaan, eli productDataBase.csv -tiedostoon
+     * @param product - Osoitin lisättävän tuotteen tuoteolioon
+     * @return 'true', jos lisäys onnistui, muuten 'false'
+     */
+    bool addProductToDatabase(const std::shared_ptr<Product>& product);
+
+    /**
+     * Hakee productDataBase.csv tiedostosta kaikki tallennetut tuotteet ja lisää ne
+     * allProducts_ map:iin
+     */
+    void pullProductsFromDatabase();
+
+    /**
+     * Lisää tallennetun reseptin tietokantaan, eli recipeDataBase.csv -tiedostoon
+     * @param recipeName - Lisättävän reseptin nimi
+     * @param recipeProducts - Vektori jossa on reseptin tuotteiden nimet ja määrät
+     * @return 'true', jos lisäys onnistui, muuten 'false'
+     */
+    bool addRecipeToDatabase(const std::string& recipeName,
+                             const std::vector<std::pair<std::string,
+                             double>>& recipeProducts);
+
+    /**
+     * Hakee recipeDataBase.csv tiedostosta kaikki tallennetut reseptit ja lisää ne
+     * allRecipes_ map:iin
+     */
+    void pullRecipesFromDatabase();
+
+    /**
+     * Poistaa reseptin allRecipes_ map:ist ja päivittää recipeDataBase.csv vastaamaan
+     * allRecipes_ map:ia.
+     * @param recipeName - Poistettavan reseptin nimi
+     * @return 'true', jos reseptin poisto onnistui, muuten 'false'
+     */
+    bool deleteRecipeData(const std::string& recipeName);
+
+    /**
+     * Synkronoi resepti tietokannan ja allRecipes_ map:in.
+     */
+    void syncRecipeDataBase();
+
+
+    // Tuotteiden käsittely
 
     /**
      * Hakee tuotteelle hinnan ja palauttaa sen
@@ -45,65 +90,13 @@ public:
      * @return tuotteen kuvaava nimi haettuna tuoteoliosta
      */
     std::string getProductDescName(const std::string& productName) const;
+
     /**
      * Hakee kaikki tallennetut tuotteet allProducts_ map:ista ja palauttaa
      * niiden nimet vektorina
      * @return Kaikkien tallennettujen tuotteiden nimet vektorina
      */
     std::vector<std::string> getAllProducts() const;
-
-    /**
-     * Hakee kaikki tallennetut reseptit allRecipes_ map:ista ja palauttaa
-     * niiden nimet vektorina
-     * @return Kaikkien tallennettujen reseptejen nimet vektorina
-     */
-    std::vector<std::string> getAllRecipes() const;
-
-    /**
-     * Etsii reseptin tuotteet allRecipes_ map:ista ja palauttaa tuotteen vektorina
-     * @param recipeName - Etsittävän reseptin nimi
-     * @return Vektori joka sisältää etsittävän reseptin tuotteet ja määrät
-     */
-    std::vector<std::pair<std::string, double>> getRecipeProducts(
-                                                    const std::string& recipeName) const;
-
-
-    /**
-     * Lisää tallennetun tuotteen tietokantaan, eli productDataBase.csv -tiedostoon
-     * @param product - Osoitin lisättävän tuotteen tuoteolioon
-     * @return 'true', jos lisäys onnistui, muuten 'false'
-     */
-    bool addProductToDatabase(const std::shared_ptr<Product>& product);
-
-
-    /**
-     * Hakee productDataBase.csv tiedostosta kaikki tallennetut tuotteet ja lisää ne
-     * allProducts_ map:iin
-     */
-    void pullProductsFromDatabase();
-
-
-    /**
-     * Lisää tallennetun reseptin tietokantaan, eli recipeDataBase.csv -tiedostoon
-     * @param recipeName - Lisättävän reseptin nimi
-     * @param recipeProducts - Vektori jossa on reseptin tuotteiden nimet ja määrät
-     * @return 'true', jos lisäys onnistui, muuten 'false'
-     */
-    bool addRecipeToDatabase(const std::string& recipeName,
-                             const std::vector<std::pair<std::string,
-                             double>>& recipeProducts);
-
-
-    /**
-     * Hakee recipeDataBase.csv tiedostosta kaikki tallennetut reseptit ja lisää ne
-     * allRecipes_ map:iin
-     */
-    void pullRecipesFromDatabase();
-
-
-
-    // Tuotteiden käsittely
-
 
     /**
      * Luo hakutuloksena löytyneelle tuotteelle tuoteolion ja lisää sen foundProducts_
@@ -128,6 +121,27 @@ public:
 
     // Reseptien käsittely
 
+    /**
+     * Hakee kaikki tallennetut reseptit allRecipes_ map:ista ja palauttaa
+     * niiden nimet vektorina
+     * @return Kaikkien tallennettujen reseptejen nimet vektorina
+     */
+    std::vector<std::string> getAllRecipes() const;
+
+    /**
+     * Etsii reseptin tuotteet ja määrät allRecipes_ map:ista ja palauttaa ne pair vektorina
+     * @param recipeName - Etsittävän reseptin nimi
+     * @return Vektori joka sisältää etsittävän reseptin tuotteet ja määrät
+     */
+    std::vector<std::pair<std::string, double>> getRecipeProductPairs(
+        const std::string& recipeName) const;
+
+    /**
+     * Etsii reseptin tuotteet allRecipes_ map:ista ja palauttaa tuotteiden nimet vektorina
+     * @param recipeName - Etsittävän reseptin nimi
+     * @return Vektori joka sisältää etsittävän reseptin tuotteet
+     */
+    std::vector<std::string> getRecipeProductNames(const std::string& recipeName) const;
 
     /**
      * Tarkistaa onko resepti olemassa, eli onko reseptiä allRecipes_ map:issa
@@ -151,7 +165,18 @@ public:
      *                  1 = koko tuote
      *                  0,5 = puolikas tuote jne...
      */
-    void addProductToRecipe(const std::string& recipeName, const std::string& productName, const double& amount);
+    void addProductToRecipe(const std::string& recipeName,
+                            const std::string& productName,
+                            const double& amount);
+
+    /**
+     * Päivittää reseptin vaihtamalla tuote,määrä vektorin uuteen
+     * @param recipeName - Resepti, jota muokataan
+     * @param updatedRecipeProducts - Päivitetty tuotevektori
+     * @return palauttee 'true', jos onnistui, muuten 'false'
+     */
+    bool updateRecipeProducts(const std::string& recipeName,
+                              std::vector<std::pair<std::string, double>> updatedRecipeProducts);
 
     /**
      * Laskee reseptin annoshinnan, eli aineet/kertoja syöty
@@ -159,7 +184,10 @@ public:
      * @param servings  - Syöntikertojen määrä
      * @return palauttaa annoshinnan
      */
+
     double calculatePricePerServing(const std::string& recipeName, const double& servings) const;
+
+
     // Muut funkiot
 
     /**
@@ -171,11 +199,7 @@ public:
     std::vector<std::string> split(const std::string& str, char delim = ';');
 
 
-    //Testifunktioita
-    void printAllProducts() const;
-    void tulostaFoundProductsKoko();
-    void tulostaRecipes();
-    void tulostaRecipesJaHinnat();
+
 
 private:
 

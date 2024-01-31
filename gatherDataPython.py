@@ -17,20 +17,19 @@ def cleanText(text):
 def main(searchFor):
 
     driver = webdriver.Firefox()
-    # Haettava url poistettu
-    url = f"<HAETTAVA URL>"
+    url = f"**SIVUN OSOITE**?queryString={searchFor}"
     driver.get(url)
 
     time.sleep(2)
 
     #ehkä tarpeellinen
     #driver.execute_script("window.scrollBy(0, 500);")
-    time.sleep(2)
+    # time.sleep(2)
 
     # Etsii 8 tai alle tuotetta
     products = driver.find_elements(By.XPATH, '(//*[contains(@class, "sc-76f76d49-0")])[position() <= 8]')
 
-    time.sleep(2)
+    # time.sleep(2)
 
     # Avaa tiedosto kirjoittamista varten
     with open('searchResults.csv', 'w', newline='', encoding='utf-8') as csvfile:
